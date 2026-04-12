@@ -36,8 +36,12 @@ export const register = async (req, res, next) => {
     });
 
     // If registering as technician, create technician profile
-    if (role === 'technician') {
-      await Technician.create({ user: user._id });
+     if (role === 'technician') {
+      await Technician.create({ 
+        user: user._id,
+        email: email,
+        name: name
+      });
     }
 
     const token = generateToken(user._id);
@@ -91,6 +95,17 @@ export const login = async (req, res, next) => {
         success: false,
         message: 'Invalid credentials',
       });
+    }
+
+    // Check if technician is approved
+    if (user.role === 'technician') {
+      const technician = await Technician.findOne({ user: user._id });
+      if (!technician || !technician.approved) {
+        return res.status(403).json({
+          success: false,
+          message: 'Technician account is not approved. Please wait for admin approval.',
+        });
+      }
     }
 
     const token = generateToken(user._id);
