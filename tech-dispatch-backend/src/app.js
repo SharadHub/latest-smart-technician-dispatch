@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import technicianRoutes from "./routes/technician.routes.js";
+import recommendationRoutes from "./routes/recommendation.routes.js";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/technicians", technicianRoutes);
+app.use("/api/recommendations", recommendationRoutes);
 
 app.get("/", (req, res) => {
   res.send("Tech Dispatch API running");
