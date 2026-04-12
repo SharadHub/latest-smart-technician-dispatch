@@ -2,9 +2,7 @@ import Technician from "../models/Technician.js";
 import Booking from "../models/Booking.js";
 import Rating from "../models/Rating.js";
 
-// @desc    Get technician profile
-// @route   GET /api/technicians/profile
-// @access  Private/Technician
+
 export const getProfile = async (req, res, next) => {
   try {
     const technician = await Technician.findOne({ user: req.user.id });
@@ -25,9 +23,6 @@ export const getProfile = async (req, res, next) => {
   }
 };
 
-// @desc    Update technician profile
-// @route   PUT /api/technicians/profile
-// @access  Private/Technician
 export const updateProfile = async (req, res, next) => {
   try {
     const { skills, name, email, location, status } = req.body;
@@ -54,22 +49,27 @@ export const updateProfile = async (req, res, next) => {
   }
 };
 
-// @desc    Get assigned bookings for technician
-// @route   GET /api/technicians/bookings
-// @access  Private/Technician
 export const getAssignedBookings = async (req, res, next) => {
   try {
+    const technician = await Technician.findOne({ user: req.user.id });
+    if (!technician) {
+      return res.status(404).json({
+        success: false,
+        message: "Technician profile not found"
+      });
+    }
+
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
 
-    const bookings = await Booking.find({ technicianId: req.user.id })
+    const bookings = await Booking.find({ technicianId: technician._id })
       .populate("userId", "name email")
       .skip(skip)
       .limit(limit)
       .sort("-createdAt");
 
-    const total = await Booking.countDocuments({ technicianId: req.user.id });
+    const total = await Booking.countDocuments({ technicianId: technician._id });
 
     res.status(200).json({
       success: true,
@@ -84,9 +84,6 @@ export const getAssignedBookings = async (req, res, next) => {
   }
 };
 
-// @desc    Update booking status (legacy - use specific endpoints instead)
-// @route   PUT /api/technicians/bookings/:id/status
-// @access  Private/Technician
 export const updateBookingStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
@@ -125,9 +122,6 @@ export const updateBookingStatus = async (req, res, next) => {
   }
 };
 
-// @desc    Update technician location
-// @route   PUT /api/technicians/location
-// @access  Private/Technician
 export const updateLocation = async (req, res, next) => {
   try {
     const { coordinates } = req.body;
@@ -159,12 +153,13 @@ export const updateLocation = async (req, res, next) => {
   }
 };
 
-// @desc    Get technician ratings
-// @route   GET /api/technicians/ratings
-// @access  Private/Technician
 export const getRatings = async (req, res, next) => {
   try {
-    const ratings = await Rating.find({ technicianId: req.user.id })
+    const technician = await Technician.findOne({ user: req.user.id });
+    if (!technician) {
+      return res.status(404).json({ success: false, message: "Technician profile not found" });
+    }
+    const ratings = await Rating.find({ technicianId: technician._id })
       .populate("userId", "name")
       .populate("bookingId", "serviceType")
       .sort("-createdAt");
@@ -179,9 +174,6 @@ export const getRatings = async (req, res, next) => {
   }
 };
 
-// @desc    Toggle availability
-// @route   PUT /api/technicians/availability
-// @access  Private/Technician
 export const toggleAvailability = async (req, res, next) => {
   try {
     const technician = await Technician.findOne({ user: req.user.id });
