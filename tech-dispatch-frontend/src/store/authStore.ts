@@ -61,8 +61,8 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, password) => {
         set((s) => ({ ...s, isLoading: true, error: null }));
         try {
-          const response = await authService.login({ email, password });
-          set((s) => ({ ...s, user: response.data, isAuthenticated: true, isLoading: false, error: null }));
+          const user = await authService.login({ email, password });
+          set((s) => ({ ...s, user: user as User, isAuthenticated: true, isLoading: false, error: null }));
         } catch (error) {
           set((s) => ({ ...s, error: getErrorMessage(error, "Login failed"), isLoading: false }));
           throw error;
@@ -72,8 +72,8 @@ export const useAuthStore = create<AuthState>()(
       register: async (data) => {
         set((s) => ({ ...s, isLoading: true, error: null }));
         try {
-          const response = await authService.register(data);
-          handleAuthSuccess(set, response.data);
+          const user = await authService.register(data);
+          handleAuthSuccess(set, user as User);
         } catch (error) {
           set((s) => ({ ...s, error: getErrorMessage(error, "Registration failed"), isLoading: false }));
           throw error;

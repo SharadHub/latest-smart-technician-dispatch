@@ -34,7 +34,11 @@ export default function Login() {
         const user = useAuthStore.getState().user;
         toast.success(`Welcome back, ${user?.name}!`);
         navigate(user?.role === "admin" ? "/admin" : user?.role === "technician" ? "/technician" : "/dashboard");
-      } catch {
+      } catch (error: any) {
+        // Handle specific technician approval error
+        if (error?.response?.data?.message?.includes('not approved')) {
+          toast.error('Your technician account is awaiting admin approval.');
+        }
         // error set in store
       }
     },

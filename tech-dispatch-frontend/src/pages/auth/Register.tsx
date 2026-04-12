@@ -91,13 +91,15 @@ export default function Register() {
       await register(form);
       if (form.role === "technician") {
         toast.success("Registered! Awaiting admin approval.");
-        navigate("/technician");
+        useAuthStore.getState().logout();
+        navigate("/technician-pending");
       } else {
         toast.success(`Welcome, ${form.name}!`);
-        navigate("/dashboard");
+        useAuthStore.getState().logout();
+        navigate("/login");
       }
-    } catch {
-      // error set in store
+    } catch (err) {
+      console.error('Registration error:', err);
     }
   };
 
@@ -206,7 +208,6 @@ export default function Register() {
                   name="name"
                   value={form.name}
                   onChange={handleChange}
-                  placeholder="John Doe"
                   className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${
                     formErrors.name ? "border-red-300 bg-red-50" : "border-gray-200"
                   }`}
@@ -231,7 +232,6 @@ export default function Register() {
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="you@example.com"
                   className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${
                     formErrors.email ? "border-red-300 bg-red-50" : "border-gray-200"
                   }`}
@@ -256,7 +256,6 @@ export default function Register() {
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
-                  placeholder="+977 98XXXXXXXX"
                   className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${
                     formErrors.phone ? "border-red-300 bg-red-50" : "border-gray-200"
                   }`}

@@ -13,7 +13,10 @@ export default function PublicRoute({ children }: PublicRouteProps) {
     if (user.role === "admin") {
       return <Navigate to="/admin" replace />;
     } else if (user.role === "technician") {
-      return <Navigate to="/technician" replace />;
+      // For technicians, we need to check if they're approved
+      // Since we can't easily check approval status here without additional API calls,
+      // redirect them to login where approval will be checked
+      return <Navigate to="/login" replace />;
     } else {
       return <Navigate to="/dashboard" replace />;
     }

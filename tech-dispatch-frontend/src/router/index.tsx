@@ -7,6 +7,7 @@ import Landing from "../pages/Landing";
 import Services from "../pages/Services";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
+import TechnicianPending from "../pages/auth/TechnicianPending";
 
 // User pages
 import UserDashboard from "../pages/user/UserDashboard";
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
   { path: "/services", element: <PublicRoute><Services /></PublicRoute> },
   { path: "/login", element: <PublicRoute><Login /></PublicRoute> },
   { path: "/register", element: <PublicRoute><Register /></PublicRoute> },
+  { path: "/technician-pending", element: <PublicRoute><TechnicianPending /></PublicRoute> },
 
   // User (role: user)
   {
