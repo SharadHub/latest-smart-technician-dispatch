@@ -30,7 +30,9 @@ const pushToQueue = async (bookingId, technicians) => {
 const notifyTechnicians = (bookingId, technicians, expiresAt, serviceType) => {
   const io = getIO();
   technicians.forEach((entry) => {
-    io.to(`technician:${entry.technician._id}`).emit("booking-request", {
+    const room = `technician:${entry.technician.user._id}`;
+    console.log(`[Dispatch] Emitting 'booking-request' to room ${room}`);
+    io.to(`technician:${entry.technician.user._id}`).emit("booking-request", {
       bookingId,
       serviceType,
       distance: entry.distance,
@@ -101,7 +103,7 @@ const notifyUserAccepted = (booking, technicians, techId) => {
 const notifyAllUpdated = (booking, technicians, status) => {
   const io = getIO();
   technicians.forEach((entry) => {
-    io.to(`technician:${entry.technician._id}`).emit("booking-updated", {
+    io.to(`technician:${entry.technician.user._id}`).emit("booking-updated", {
       bookingId: booking._id,
       status,
     });
