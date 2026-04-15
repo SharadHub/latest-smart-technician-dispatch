@@ -22,10 +22,6 @@ const seedTechnicians = async () => {
       phone: '9800000001',
       role: 'admin',
     });
-    console.log('Admin created: admin@techdispatch.com / admin123');
-
-    console.log("\n=== Admin Seeding Complete ===");
-
   } catch (error) {
     console.error("Error seeding admin:", error);
   } finally {
