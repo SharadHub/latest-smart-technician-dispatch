@@ -49,12 +49,14 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-6">
-            <Link
-              to={user ? getDashboardLink() : "/"}
-              className="text-sm font-medium text-gray-600 hover:text-primary transition-colors no-underline"
-            >
-              Home
-            </Link>
+            {!user && (
+              <Link
+                to="/"
+                className="text-sm font-medium text-gray-600 hover:text-primary transition-colors no-underline"
+              >
+                Home
+              </Link>
+            )}
             {!user && (
               <Link
                 to="/services"
@@ -127,13 +129,15 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             className="md:hidden py-4 border-t border-gray-100 space-y-2"
           >
-            <Link
-              to={user ? getDashboardLink() : "/"}
-              onClick={() => setMobileOpen(false)}
-              className="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-lg no-underline"
-            >
-              Home
-            </Link>
+            {!user && (
+              <Link
+                to="/"
+                onClick={() => setMobileOpen(false)}
+                className="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-lg no-underline"
+              >
+                Home
+              </Link>
+            )}
             {!user && (
               <Link
                 to="/services"
