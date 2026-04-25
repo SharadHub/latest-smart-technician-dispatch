@@ -3,7 +3,7 @@ import Technician from "../models/Technician.js";
 import Rating from "../models/Rating.js";
 import { dispatchTechnicians } from "../utils/dispatch.js";
 import { getIO } from "../socket/index.js";
-import { calculateDistance, generateSmoothPath, calculateETA } from "../utils/pathfinding.js";
+import { getShortestPath, calculateETA } from "../utils/dijkstra.js";
 
 const isExpired = (booking) => booking.status === "requested" && booking.expiresAt && booking.expiresAt < new Date();
 
@@ -216,14 +216,11 @@ class GetRouteQuery {
       return { status: 400, data: { success: false, message: "Technician location not available" } };
     }
 
-    // Calculate distance
-    const distance = calculateDistance(techLat, techLng, userLat, userLng);
-
-    // Generate smooth path using KNN-inspired approach
-    const path = generateSmoothPath([techLat, techLng], [userLat, userLng], 20);
-
-    // Calculate ETA (assuming 30 km/h average speed)
-    const etaMinutes = calculateETA(distance, 30);
+    // Dijkstra shortest path from technician to user
+    const { path, distance: roadDistance, waypoints } = getShortestPath(
+      techLat, techLng, userLat, userLng
+    );
+    const etaMinutes = calculateETA(roadDistance);
 
     return {
       status: 200,
@@ -231,12 +228,13 @@ class GetRouteQuery {
         success: true,
         data: {
           path,
-          distance: Math.round(distance * 100) / 100, // Round to 2 decimals
+          waypoints,
+          distance: Math.round(roadDistance * 100) / 100,
           etaMinutes,
           start: { lat: techLat, lng: techLng, name: booking.technicianId?.name },
-          end: { lat: userLat, lng: userLng, name: booking.userId?.name },
-        }
-      }
+          end:   { lat: userLat, lng: userLng, name: booking.userId?.name },
+        },
+      },
     };
   }
 }
