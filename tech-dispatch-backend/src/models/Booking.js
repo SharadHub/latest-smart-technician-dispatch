@@ -38,12 +38,8 @@ const bookingSchema = new mongoose.Schema({
         default: "pending"
       },
       respondedAt: Date,
-      // KNN Algorithm scores
-      knnScore: { type: Number, default: 0 },
       distance: { type: Number, default: 0 },
-      skillScore: { type: Number, default: 0 },
-      ratingScore: { type: Number, default: 0 },
-      rank: { type: Number, default: 0 }
+      rank: { type: Number, default: 1 }
     }
   ]
 }, { timestamps: true });
