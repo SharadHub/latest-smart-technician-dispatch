@@ -23,10 +23,10 @@ const fadeUp = {
 };
 
 const stats = [
-  { label: "Verified Pros", value: "500+", icon: Users },
-  { label: "Jobs Completed", value: "10K+", icon: CheckCircle },
-  { label: "Avg Response", value: "< 5min", icon: Clock },
-  { label: "Customer Rating", value: "4.8★", icon: Star },
+  { label: "Verified Pros", value: "5+", icon: Users },
+  { label: "Jobs Completed", value: "10+", icon: CheckCircle },
+  { label: "Avg Response", value: "< 10min", icon: Clock },
+  { label: "Customer Rating", value: "*.*★", icon: Star },
 ];
 
 const whyUs = [
@@ -68,17 +68,6 @@ export default function Landing() {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
           <div className="text-center max-w-3xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full mb-6">
-                <Zap size={14} />
-                Instant Service Dispatch
-              </span>
-            </motion.div>
-
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -98,7 +87,7 @@ export default function Landing() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="mt-6 text-lg text-gray-500 leading-relaxed"
             >
-              From plumbing to electrical, carpentry to cleaning — book verified
+              From plumbing to electrical, carpentry to cleaning, book verified
               professionals instantly. Real-time dispatch, no waiting.
             </motion.p>
 
