@@ -25,6 +25,7 @@ export default function BookingTrack() {
   const [loading, setLoading] = useState(true);
   const [techLocation, setTechLocation] = useState<[number, number] | undefined>();
   const [routePath, setRoutePath] = useState<[number, number][] | undefined>();
+  const [routeWaypoints, setRouteWaypoints] = useState<{ name: string; lat: number; lng: number }[] | undefined>();
   const [distance, setDistance] = useState<number | null>(null);
   const [eta, setEta] = useState<number | null>(null);
 
@@ -64,17 +65,12 @@ export default function BookingTrack() {
   const fetchRoute = async () => {
     try {
       const routeData = await bookingService.getRoute(id!);
-      if (routeData.path) {
-        setRoutePath(routeData.path);
-      }
-      if (routeData.distance) {
-        setDistance(routeData.distance);
-      }
-      if (routeData.etaMinutes) {
-        setEta(routeData.etaMinutes);
-      }
+      if (routeData.path)      setRoutePath(routeData.path);
+      if (routeData.waypoints) setRouteWaypoints(routeData.waypoints);
+      if (routeData.distance)  setDistance(routeData.distance);
+      if (routeData.etaMinutes) setEta(routeData.etaMinutes);
     } catch {
-      // Silent fail - map will still work without path
+      // Silent fail — map still works without the Dijkstra path
     }
   };
 
@@ -151,6 +147,7 @@ export default function BookingTrack() {
                 userLocation={userLocation}
                 techLocation={techLocation}
                 path={routePath}
+                waypoints={routeWaypoints}
                 height="500px"
               />
             </motion.div>
