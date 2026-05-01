@@ -6,6 +6,7 @@ import {
   acceptBooking,
   rejectBooking,
   cancelBooking,
+  startBooking,
   failBooking,
   completeBooking,
   rateBooking,
@@ -28,6 +29,7 @@ router.get("/:id/route", protect, getRoute);
 // Technician actions
 router.put("/:id/accept", protect, isTechnician, acceptBooking);
 router.put("/:id/reject", protect, isTechnician, rejectBooking);
+router.put("/:id/start", protect, isTechnician, startBooking);
 router.put("/:id/fail", protect, isTechnician, failBooking);
 router.put("/:id/complete", protect, isTechnician, completeBooking);
 
