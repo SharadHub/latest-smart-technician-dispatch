@@ -37,6 +37,11 @@ const endpoints = {
     path: (id: string) => `/bookings/${id}/reject`,
     method: "put" as const,
   },
+  startBooking: {
+    path: (id: string) => `/bookings/${id}/start`,
+    method: "put" as const,
+    transform: (r: any) => r.data,
+  },
   completeBooking: {
     path: (id: string) => `/bookings/${id}/complete`,
     method: "put" as const,
