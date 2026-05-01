@@ -4,6 +4,7 @@ const technicianSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
   name: String,
   email: { type: String, unique: true },
+  phone: String,
   skills: [String],
   location: {
     type: {
