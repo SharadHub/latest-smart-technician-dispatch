@@ -37,10 +37,11 @@ export const register = async (req, res, next) => {
 
     // If registering as technician, create technician profile
      if (role === 'technician') {
-      await Technician.create({ 
+      await Technician.create({
         user: user._id,
-        email: email,
-        name: name
+        email,
+        name,
+        phone: phone || undefined,
       });
     }
 
