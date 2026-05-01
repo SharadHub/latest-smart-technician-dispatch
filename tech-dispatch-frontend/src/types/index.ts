@@ -35,18 +35,6 @@ export interface UserRegistrationData {
   role?: "user" | "technician";
 }
 
-export interface UserUpdateData {
-  name?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-}
-
-export interface PasswordUpdateData {
-  currentPassword: string;
-  newPassword: string;
-}
-
 // ==========================================
 // Technician Types
 // ==========================================
@@ -184,12 +172,6 @@ export interface PaginatedResponse<T> {
   page: number;
   pages: number;
   data: T[];
-}
-
-export interface SingleResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
 }
 
 export interface AuthResponse {
