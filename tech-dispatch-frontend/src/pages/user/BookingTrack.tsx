@@ -13,7 +13,7 @@ interface Booking {
   status: string;
   serviceType: string;
   userId: { _id: string; name: string; email: string; location?: { lat: number; lng: number } };
-  technicianId?: { _id: string; name: string; location?: { coordinates: [number, number] } };
+  technicianId?: { _id: string; name: string; phone?: string; location?: { coordinates: [number, number] } };
   userLocation?: [number, number];
 }
 
@@ -32,7 +32,6 @@ export default function BookingTrack() {
   useEffect(() => {
     if (!id) return;
     fetchBooking();
-    // Poll for updates every 10 seconds
     const interval = setInterval(fetchBooking, 10000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -44,14 +43,12 @@ export default function BookingTrack() {
       const bookingData = response.data;
       setBooking(bookingData);
 
-      // Update technician location if available
       if (bookingData.technicianId?.location?.coordinates) {
         const [lng, lat] = bookingData.technicianId.location.coordinates;
         setTechLocation([lat, lng]);
       }
 
-      // Fetch route if we have both locations
-      if (bookingData.technicianId?.location?.coordinates && 
+      if (bookingData.technicianId?.location?.coordinates &&
           (bookingData.userLocation || bookingData.userId?.location)) {
         fetchRoute();
       }
@@ -65,16 +62,15 @@ export default function BookingTrack() {
   const fetchRoute = async () => {
     try {
       const routeData = await bookingService.getRoute(id!);
-      if (routeData.path)      setRoutePath(routeData.path);
-      if (routeData.waypoints) setRouteWaypoints(routeData.waypoints);
-      if (routeData.distance)  setDistance(routeData.distance);
+      if (routeData.path)       setRoutePath(routeData.path);
+      if (routeData.waypoints)  setRouteWaypoints(routeData.waypoints);
+      if (routeData.distance)   setDistance(routeData.distance);
       if (routeData.etaMinutes) setEta(routeData.etaMinutes);
     } catch {
       // Silent fail — map still works without the Dijkstra path
     }
   };
 
-  // Get user location (from booking userLocation or user profile)
   const userLocation: [number, number] | null = booking?.userLocation
     ? [booking.userLocation[1], booking.userLocation[0]]
     : booking?.userId?.location
@@ -204,11 +200,14 @@ export default function BookingTrack() {
                 )}
 
                 {/* Contact Button for Users */}
-                {isUser && (
-                  <button className="mt-3 w-full py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 transition-colors flex items-center justify-center gap-2">
+                {isUser && booking.technicianId?.phone && (
+                  <a
+                    href={`tel:${booking.technicianId.phone}`}
+                    className="mt-3 w-full py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 transition-colors flex items-center justify-center gap-2 no-underline"
+                  >
                     <Phone size={16} />
                     Call Technician
-                  </button>
+                  </a>
                 )}
               </motion.div>
             )}
