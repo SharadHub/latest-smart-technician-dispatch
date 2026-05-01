@@ -17,6 +17,10 @@ export const initSocket = (httpServer) => {
       console.log(`${role}:${userId} joined room`);
     });
 
+    socket.on("ping", (data) => {
+      socket.emit("pong", data);
+    });
+
     socket.on("disconnect", () => {
       console.log("Socket disconnected:", socket.id);
     });
