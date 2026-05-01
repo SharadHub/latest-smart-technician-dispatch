@@ -2,8 +2,6 @@ import { create } from "zustand";
 import { bookingService } from "../services";
 import type { Booking, BookingStatus, BookingCreateData, BookingRatingData } from "../types";
 
-export type { Booking, BookingStatus };
-
 export interface BookingState {
   bookings: Booking[];
   loading: boolean;
