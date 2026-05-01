@@ -4,6 +4,10 @@ const bookingSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   technicianId: { type: mongoose.Schema.Types.ObjectId, ref: "Technician", default: null },
   serviceType: String,
+  userLocation: {
+    type: [Number], // [lng, lat] GeoJSON order
+    default: undefined,
+  },
   status: {
     type: String,
     enum: ["requested", "accepted", "in-progress", "completed", "failed", "rejected", "expired", "cancelled"],
