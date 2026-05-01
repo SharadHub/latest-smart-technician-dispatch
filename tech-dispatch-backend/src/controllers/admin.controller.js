@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import Technician from "../models/Technician.js";
 import Booking from "../models/Booking.js";
+import Rating from "../models/Rating.js";
 
 // @desc    Get all users
 // @route   GET /api/admin/users
@@ -94,6 +95,15 @@ export const deleteUser = async (req, res, next) => {
       });
     }
 
+    if (user.role === "technician") {
+      const tech = await Technician.findOne({ user: user._id });
+      if (tech) {
+        await Rating.deleteMany({ technicianId: tech._id });
+        await tech.deleteOne();
+      }
+    }
+    await Booking.deleteMany({ userId: user._id });
+    await Rating.deleteMany({ userId: user._id });
     await user.deleteOne();
 
     res.status(200).json({
