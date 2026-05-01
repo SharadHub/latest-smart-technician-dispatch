@@ -37,6 +37,7 @@ class CreateBookingCommand {
     const booking = await Booking.create({
       userId: req.user.id,
       serviceType,
+      userLocation: userLocation || undefined,
       status: "requested",
       statusHistory: [history("requested", "user")],
     });
@@ -61,8 +62,8 @@ class GetBookingsQuery {
   async execute(req) {
     const query = req.user.role === "admin" ? {} : { userId: req.user.id };
     const bookings = await Booking.find(query)
-      .populate("userId", "name email")
-      .populate("technicianId", "name email skills")
+      .populate("userId", "name email phone")
+      .populate("technicianId", "name email phone skills")
       .sort("-createdAt");
     return { status: 200, data: { success: true, count: bookings.length, data: bookings } };
   }
@@ -71,9 +72,9 @@ class GetBookingsQuery {
 class GetBookingQuery {
   async execute(req) {
     const booking = await Booking.findById(req.params.id)
-      .populate("userId", "name email")
-      .populate("technicianId", "name email")
-      .populate("requestQueue.technicianId", "name email");
+      .populate("userId", "name email phone")
+      .populate("technicianId", "name email phone skills location")
+      .populate("requestQueue.technicianId", "name email phone");
 
     if (!booking) return { status: 404, data: { success: false, message: "Booking not found" } };
 
@@ -133,13 +134,31 @@ class CancelBookingCommand {
   }
 }
 
-class FailBookingCommand {
+class StartBookingCommand {
   async execute(req) {
     const techId = await getTechnicianFromUser(req.user.id);
     if (!techId) return { status: 404, data: { success: false, message: "Technician profile not found" } };
 
     const booking = await Booking.findOneAndUpdate(
       { _id: req.params.id, technicianId: techId, status: "accepted" },
+      { $set: { status: "in-progress" }, $push: { statusHistory: history("in-progress", "technician") } },
+      { new: true }
+    );
+
+    if (!booking) return { status: 409, data: { success: false, message: "Cannot start (not accepted or not assigned)" } };
+
+    emitToUser(booking.userId, "booking-updated", { bookingId: booking._id, status: "in-progress" });
+    return { status: 200, data: { success: true, message: "Job started", data: booking } };
+  }
+}
+
+class FailBookingCommand {
+  async execute(req) {
+    const techId = await getTechnicianFromUser(req.user.id);
+    if (!techId) return { status: 404, data: { success: false, message: "Technician profile not found" } };
+
+    const booking = await Booking.findOneAndUpdate(
+      { _id: req.params.id, technicianId: techId, status: { $in: ["accepted", "in-progress"] } },
       { $set: { status: "failed", failedAt: new Date() }, $push: { statusHistory: history("failed", "technician") } },
       { new: true }
     );
@@ -157,7 +176,7 @@ class CompleteBookingCommand {
     if (!techId) return { status: 404, data: { success: false, message: "Technician profile not found" } };
 
     const booking = await Booking.findOneAndUpdate(
-      { _id: req.params.id, technicianId: techId, status: "accepted" },
+      { _id: req.params.id, technicianId: techId, status: { $in: ["accepted", "in-progress"] } },
       { $set: { status: "completed", completedAt: new Date() }, $push: { statusHistory: history("completed", "technician") } },
       { new: true }
     );
@@ -258,6 +277,7 @@ export const getBooking = handler(GetBookingQuery);
 export const acceptBooking = handler(AcceptBookingCommand);
 export const rejectBooking = handler(RejectBookingCommand);
 export const cancelBooking = handler(CancelBookingCommand);
+export const startBooking = handler(StartBookingCommand);
 export const failBooking = handler(FailBookingCommand);
 export const completeBooking = handler(CompleteBookingCommand);
 export const rateBooking = handler(RateBookingCommand);
