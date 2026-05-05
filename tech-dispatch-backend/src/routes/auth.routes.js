@@ -1,30 +1,23 @@
 import express from "express";
-import {
-  register,
-  login,
-  getMe,
-  updateDetails,
-  updatePassword,
-  deleteMe,
-  updateLocation
-} from "../controllers/auth.controller.js";
+import { rateLimit } from "express-rate-limit";
+import { register, login, logout, getMe } from "../controllers/auth.controller.js";
 import { protect } from "../middlewares/auth.middleware.js";
-import {
-  registerValidation,
-  loginValidation,
-  updateDetailsValidation,
-  updatePasswordValidation,
-  handleValidationErrors
-} from "../middlewares/validation.middleware.js";
+import { registerValidation, loginValidation, handleValidationErrors } from "../middlewares/validation.middleware.js";
 
 const router = express.Router();
 
-router.post("/register", registerValidation, handleValidationErrors, register);
-router.post("/login", loginValidation, handleValidationErrors, login);
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { success: false, message: "Too many authentication attempts, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limit only the credential-submission routes, not session reads/logout
+router.post("/register", authLimiter, registerValidation, handleValidationErrors, register);
+router.post("/login", authLimiter, loginValidation, handleValidationErrors, login);
+router.post("/logout", logout);
 router.get("/me", protect, getMe);
-router.delete("/me", protect, deleteMe);
-router.put("/updatedetails", protect, updateDetailsValidation, handleValidationErrors, updateDetails);
-router.put("/updatepassword", protect, updatePasswordValidation, handleValidationErrors, updatePassword);
-router.put("/location", protect, updateLocation);
 
 export default router;

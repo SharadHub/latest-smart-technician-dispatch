@@ -1,328 +1,206 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useTechnicianBookingStore } from "../../store/technicianBookingStore";
-import { getServiceByKey } from "../../config/services";
-import { initSocket, disconnectSocket, subscribe } from "../../socket";
 import { useAuthStore } from "../../store/authStore";
-import { bookingService } from "../../services";
 import { technicianService } from "../../services";
-import Navbar from "../../components/layout/Navbar";
-import toast from "react-hot-toast";
+import { useSocketStore } from "../../store/socketStore";
+import { useJobStore } from "../../store/jobStore";
 import { Link } from "react-router-dom";
-import {
-  Clock,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Bell,
-  Briefcase,
-  Star,
-  User,
-  ToggleLeft,
-  ToggleRight,
-} from "lucide-react";
-import type { SocketBookingRequestPayload, SocketBookingUpdatePayload } from "../../types";
+import { Wrench, Mail, Phone, CheckCircle, Clock, LogOut, Tag, Wifi, WifiOff, Star } from "lucide-react";
+import type { Technician } from "../../types";
+import JobNotification from "./JobNotification";
 
 export default function TechnicianDashboard() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const user = useAuthStore((s) => s.user);
-  const bookings = useTechnicianBookingStore((s) => s.bookings);
-  const addBooking = useTechnicianBookingStore((s) => s.addBooking);
-  const removeBooking = useTechnicianBookingStore((s) => s.removeBooking);
+  const { user, logout } = useAuthStore();
+  const socket = useSocketStore((s) => s.socket);
+  const setMyTechnicianId = useJobStore((s) => s.setMyTechnicianId);
+  const [technician, setTechnician] = useState<Technician | null>(null);
+  const [isOnline, setIsOnline] = useState(false);
+  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-  const [acceptingId, setAcceptingId] = useState<string | null>(null);
-  const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [isAvailable, setIsAvailable] = useState(true);
-  const [toggling, setToggling] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
-
-  // Timer for countdown
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
+    technicianService.getProfile().then((res) => setTechnician(res.data)).catch(() => {});
   }, []);
 
-  // Socket connection
-  useEffect(() => {
-    if (!isAuthenticated || !user) return;
+  const handleGoOnline = () => {
+    if (!technician || !socket) return;
 
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    initSocket(token, user._id, user.role);
-
-    const unsubscribeRequest = subscribe("booking-request", (data) => {
-      const payload = data as SocketBookingRequestPayload;
-      addBooking({
-        bookingId: payload.bookingId,
-        serviceType: payload.serviceType,
-        expiresAt: payload.expiresAt,
-      });
-      toast("New job request!", { icon: "🔔" });
-    });
-
-    const unsubscribeUpdate = subscribe("booking-updated", (data) => {
-      const payload = data as SocketBookingUpdatePayload;
-      if (payload.status !== "requested") {
-        removeBooking(payload.bookingId);
-      }
-    });
-
-    return () => {
-      unsubscribeRequest();
-      unsubscribeUpdate();
-      disconnectSocket();
-    };
-  }, [isAuthenticated, user, addBooking, removeBooking]);
-
-  // Fetch availability
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const profile = await technicianService.getProfile();
-        setIsAvailable(profile.status === "active");
-      } catch {
-        // not yet approved
-      }
-    };
-    fetchProfile();
-  }, []);
-
-  const handleAccept = async (bookingId: string) => {
-    setAcceptingId(bookingId);
-    try {
-      await bookingService.acceptBooking(bookingId);
-      toast.success("Booking accepted!");
-    } catch (err: unknown) {
-      const error = err as { response?: { status: number } };
-      if (error.response?.status === 409) {
-        toast.error("Already accepted by another technician");
-        removeBooking(bookingId);
-      }
-    } finally {
-      setAcceptingId(null);
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setMyLocation(loc);
+        setMyTechnicianId(technician._id);
+        // technicianId is intentionally omitted — server derives it from the session
+        socket.emit("technician:goOnline", { lat: loc.lat, lng: loc.lng });
+        setIsOnline(true);
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          alert("Location permission denied. Please allow location access in your browser settings.");
+        } else if (window.location.protocol !== "https:" && window.location.hostname !== "localhost") {
+          alert("Location access requires a secure (HTTPS) connection in production.");
+        } else {
+          alert("Could not get your location. Please check your device settings.");
+        }
+      }
+    );
   };
 
-  const handleReject = async (bookingId: string) => {
-    setRejectingId(bookingId);
-    try {
-      await bookingService.rejectBooking(bookingId);
-      removeBooking(bookingId);
-      toast("Booking rejected", { icon: "❌" });
-    } catch {
-      toast.error("Failed to reject");
-    } finally {
-      setRejectingId(null);
-    }
+  const handleGoOffline = () => {
+    if (!technician || !socket) return;
+    // technicianId omitted — server uses socket.data.technicianId set during goOnline
+    socket.emit("technician:goOffline");
+    setIsOnline(false);
   };
 
-  const handleToggleAvailability = async () => {
-    setToggling(true);
-    try {
-      const result = await technicianService.toggleAvailability();
-      setIsAvailable(result.status === "active");
-      toast.success(
-        result.status === "active"
-          ? "You are now available"
-          : "You are now offline"
-      );
-    } catch {
-      toast.error("Failed to toggle availability");
-    } finally {
-      setToggling(false);
+  const handleLogout = async () => {
+    if (socket && isOnline) {
+      socket.emit("technician:goOffline");
     }
-  };
-
-  const formatTime = (ms: number) => {
-    if (ms <= 0) return "Expired";
-    const hrs = Math.floor(ms / 3600000);
-    const mins = Math.floor((ms % 3600000) / 60000);
-    const secs = Math.floor((ms % 60000) / 1000);
-    if (hrs > 0) return `${hrs}h ${mins}m`;
-    if (mins > 0) return `${mins}m ${secs}s`;
-    return `${secs}s`;
+    await logout();
+    window.location.href = "/login";
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+      <header className="bg-white border-b border-gray-100 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 no-underline">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Wrench size={16} className="text-white" />
+            </div>
+            <span className="text-lg font-bold text-gray-900">TechDispatch</span>
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer"
           >
-            <h1 className="text-2xl font-bold text-dark">
-              Technician Dashboard
-            </h1>
-            <p className="text-gray-500 mt-1">
-              Manage incoming job requests
-            </p>
-          </motion.div>
+            <LogOut size={16} />
+            Logout
+          </button>
+        </div>
+      </header>
 
-          <div className="flex items-center gap-4">
-            {/* Availability Toggle */}
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={handleToggleAvailability}
-              disabled={toggling}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm cursor-pointer border-none transition-colors ${
-                isAvailable
-                  ? "bg-green-50 text-green-600"
-                  : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {isAvailable ? (
-                <ToggleRight size={20} />
+      <main className="max-w-5xl mx-auto px-4 py-12">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">Welcome, {user?.name}!</h1>
+          <p className="text-gray-500 mt-1">Your technician profile.</p>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 max-w-lg">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center">
+              <Wrench size={30} className="text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">{user?.name}</h2>
+              <div className="flex items-center gap-2 mt-1">
+                {technician?.approved ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-green-50 text-green-600 text-xs font-medium rounded-full">
+                    <CheckCircle size={12} />
+                    Approved
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-50 text-amber-600 text-xs font-medium rounded-full">
+                    <Clock size={12} />
+                    Pending Approval
+                  </span>
+                )}
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium rounded-full ${isOnline ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-500"}`}>
+                  {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
+                  {isOnline ? "Online" : "Offline"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Online / Offline toggle — only for approved technicians */}
+          {technician?.approved && (
+            <div className="mb-6">
+              {isOnline ? (
+                <button
+                  onClick={handleGoOffline}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 font-medium text-sm rounded-xl hover:bg-gray-200 transition-colors cursor-pointer"
+                >
+                  <WifiOff size={16} />
+                  Go Offline
+                </button>
               ) : (
-                <ToggleLeft size={20} />
+                <button
+                  onClick={handleGoOnline}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white font-medium text-sm rounded-xl hover:bg-green-700 transition-colors cursor-pointer"
+                >
+                  <Wifi size={16} />
+                  Go Online — Accept Jobs
+                </button>
               )}
-              {isAvailable ? "Available" : "Offline"}
-            </motion.button>
-          </div>
-        </div>
-
-        {/* Quick Links */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <Link to="/technician/jobs" className="no-underline">
-            <div className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-md transition-shadow flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                <Briefcase size={20} className="text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-dark">My Jobs</p>
-                <p className="text-xs text-gray-400">View assigned jobs</p>
-              </div>
+              {isOnline && (
+                <p className="text-xs text-gray-400 mt-2">You are visible to clients. New job requests will appear as a notification.</p>
+              )}
             </div>
-          </Link>
-          <Link to="/technician/ratings" className="no-underline">
-            <div className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-md transition-shadow flex items-center gap-3">
-              <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
-                <Star size={20} className="text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-dark">My Ratings</p>
-                <p className="text-xs text-gray-400">View your reviews</p>
-              </div>
-            </div>
-          </Link>
-          <Link to="/technician/profile" className="no-underline">
-            <div className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-md transition-shadow flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                <User size={20} className="text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-dark">Profile</p>
-                <p className="text-xs text-gray-400">Manage your profile</p>
-              </div>
-            </div>
-          </Link>
-        </div>
-
-        {/* Incoming Requests */}
-        <div className="flex items-center gap-2 mb-4">
-          <Bell size={18} className="text-primary" />
-          <h2 className="text-lg font-semibold text-dark">
-            Incoming Requests
-          </h2>
-          {bookings.length > 0 && (
-            <span className="px-2 py-0.5 bg-primary text-white text-xs font-medium rounded-full">
-              {bookings.length}
-            </span>
           )}
-        </div>
 
-        {bookings.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
-            <Bell size={48} className="mx-auto text-gray-200 mb-4" />
-            <p className="text-gray-500">No pending requests</p>
-            <p className="text-xs text-gray-400 mt-1">
-              New job requests will appear here in real-time
-            </p>
-          </div>
-        ) : (
           <div className="space-y-4">
-            <AnimatePresence>
-              {bookings.map((booking) => {
-                const service = getServiceByKey(booking.serviceType);
-                const remaining = new Date(booking.expiresAt).getTime() - now;
+            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+              <Mail size={18} className="text-gray-400 shrink-0" />
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">Email</p>
+                <p className="text-sm font-medium text-gray-900">{user?.email}</p>
+              </div>
+            </div>
 
-                return (
-                  <motion.div
-                    key={booking.bookingId}
-                    layout
-                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, x: -20 }}
-                    className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-sm transition-shadow"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4">
-                        {service && (
-                          <div
-                            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                            style={{ backgroundColor: service.bg }}
-                          >
-                            <service.icon
-                              size={24}
-                              style={{ color: service.color }}
-                            />
-                          </div>
-                        )}
-                        <div>
-                          <h3 className="font-semibold text-dark">
-                            {service?.label || booking.serviceType}
-                          </h3>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {service?.description}
-                          </p>
-                        </div>
-                      </div>
+            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+              <Phone size={18} className="text-gray-400 shrink-0" />
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">Phone</p>
+                <p className="text-sm font-medium text-gray-900">{user?.phone || "Not provided"}</p>
+              </div>
+            </div>
 
-                      <div className="flex items-center gap-1.5 text-amber-600">
-                        <Clock size={14} />
-                        <span className="text-xs font-medium">
-                          {formatTime(remaining)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex items-center gap-2">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleAccept(booking.bookingId)}
-                        disabled={acceptingId === booking.bookingId}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors cursor-pointer border-none text-sm disabled:opacity-50"
-                      >
-                        {acceptingId === booking.bookingId ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <CheckCircle size={14} />
-                        )}
-                        Accept
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleReject(booking.bookingId)}
-                        disabled={rejectingId === booking.bookingId}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-600 font-medium rounded-lg hover:bg-gray-200 transition-colors cursor-pointer border-none text-sm disabled:opacity-50"
-                      >
-                        <XCircle size={14} />
-                        Reject
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+            {technician?.skills && technician.skills.length > 0 && (
+              <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
+                <Tag size={18} className="text-gray-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">Skills</p>
+                  <div className="flex flex-wrap gap-2">
+                    {technician.skills.map((skill) => (
+                      <span key={skill} className="px-2.5 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg capitalize">
+                        {skill.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+
+          {!technician?.approved && (
+            <div className="mt-6 p-4 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700">
+              Your account is pending admin approval. You'll be notified once approved.
+            </div>
+          )}
+
+          <div className="mt-6 pt-5 border-t border-gray-100">
+            <Link
+              to="/technician/reviews"
+              className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-sm font-medium hover:bg-amber-100 transition-colors no-underline"
+            >
+              <Star size={16} />
+              View My Ratings & Reviews
+            </Link>
+          </div>
+        </div>
+      </main>
+
+      {/* Job request overlay — only shown when online and a request comes in */}
+      {isOnline && (
+        <JobNotification
+          technicianLocation={myLocation}
+        />
+      )}
     </div>
   );
 }

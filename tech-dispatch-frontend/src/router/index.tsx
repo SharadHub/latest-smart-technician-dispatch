@@ -2,148 +2,81 @@ import { createBrowserRouter } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute";
 import PublicRoute from "../components/PublicRoute";
 
-// Public pages
 import Landing from "../pages/Landing";
-import Services from "../pages/Services";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import TechnicianPending from "../pages/auth/TechnicianPending";
 
-// User pages
 import UserDashboard from "../pages/user/UserDashboard";
-import CreateBooking from "../pages/user/CreateBooking";
-import MyBookings from "../pages/user/MyBookings";
-import UserProfile from "../pages/user/Profile";
-import BookingTrack from "../pages/user/BookingTrack";
+import BookService from "../pages/user/BookService";
+import JobTracker from "../pages/user/JobTracker";
+import RateJob from "../pages/user/RateJob";
 
-// Technician pages
 import TechnicianDashboard from "../pages/technician/TechnicianDashboard";
-import AssignedJobs from "../pages/technician/AssignedJobs";
-import TechnicianRatings from "../pages/technician/TechnicianRatings";
-import TechnicianProfile from "../pages/technician/TechnicianProfile";
+import ActiveJob from "../pages/technician/ActiveJob";
+import TechnicianReviews from "../pages/technician/TechnicianReviews";
 
-// Admin pages
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import UsersList from "../pages/admin/UsersList";
+import UserDetail from "../pages/admin/UserDetail";
 import TechniciansList from "../pages/admin/TechniciansList";
-import JobReports from "../pages/admin/JobReports";
+import TechnicianDetail from "../pages/admin/TechnicianDetail";
 
 const router = createBrowserRouter([
-  // Public
   { path: "/", element: <PublicRoute><Landing /></PublicRoute> },
-  { path: "/services", element: <PublicRoute><Services /></PublicRoute> },
   { path: "/login", element: <PublicRoute><Login /></PublicRoute> },
   { path: "/register", element: <PublicRoute><Register /></PublicRoute> },
-  { path: "/technician-pending", element: <PublicRoute><TechnicianPending /></PublicRoute> },
+  { path: "/technician-pending", element: <TechnicianPending /> },
 
-  // User (role: user)
   {
     path: "/dashboard",
-    element: (
-      <ProtectedRoute roles={["user"]}>
-        <UserDashboard />
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute roles={["user"]}><UserDashboard /></ProtectedRoute>,
   },
   {
     path: "/book",
-    element: (
-      <ProtectedRoute roles={["user"]}>
-        <CreateBooking />
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute roles={["user"]}><BookService /></ProtectedRoute>,
   },
   {
-    path: "/my-bookings",
-    element: (
-      <ProtectedRoute roles={["user"]}>
-        <MyBookings />
-      </ProtectedRoute>
-    ),
+    path: "/track",
+    element: <ProtectedRoute roles={["user"]}><JobTracker /></ProtectedRoute>,
   },
   {
-    path: "/booking/:id/track",
-    element: (
-      <ProtectedRoute roles={["user", "technician"]}>
-        <BookingTrack />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/profile",
-    element: (
-      <ProtectedRoute roles={["user"]}>
-        <UserProfile />
-      </ProtectedRoute>
-    ),
+    path: "/rate/:jobId",
+    element: <ProtectedRoute roles={["user"]}><RateJob /></ProtectedRoute>,
   },
 
-  // Technician (role: technician)
   {
     path: "/technician",
-    element: (
-      <ProtectedRoute roles={["technician"]}>
-        <TechnicianDashboard />
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute roles={["technician"]}><TechnicianDashboard /></ProtectedRoute>,
   },
   {
-    path: "/technician/jobs",
-    element: (
-      <ProtectedRoute roles={["technician"]}>
-        <AssignedJobs />
-      </ProtectedRoute>
-    ),
+    path: "/technician/job",
+    element: <ProtectedRoute roles={["technician"]}><ActiveJob /></ProtectedRoute>,
   },
   {
-    path: "/technician/ratings",
-    element: (
-      <ProtectedRoute roles={["technician"]}>
-        <TechnicianRatings />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/technician/profile",
-    element: (
-      <ProtectedRoute roles={["technician"]}>
-        <TechnicianProfile />
-      </ProtectedRoute>
-    ),
+    path: "/technician/reviews",
+    element: <ProtectedRoute roles={["technician"]}><TechnicianReviews /></ProtectedRoute>,
   },
 
-  // Admin (role: admin)
   {
     path: "/admin",
-    element: (
-      <ProtectedRoute roles={["admin"]}>
-        <AdminDashboard />
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute roles={["admin"]}><AdminDashboard /></ProtectedRoute>,
   },
   {
     path: "/admin/users",
-    element: (
-      <ProtectedRoute roles={["admin"]}>
-        <UsersList />
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute roles={["admin"]}><UsersList /></ProtectedRoute>,
+  },
+  {
+    path: "/admin/users/:id",
+    element: <ProtectedRoute roles={["admin"]}><UserDetail /></ProtectedRoute>,
   },
   {
     path: "/admin/technicians",
-    element: (
-      <ProtectedRoute roles={["admin"]}>
-        <TechniciansList />
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute roles={["admin"]}><TechniciansList /></ProtectedRoute>,
   },
   {
-    path: "/admin/reports",
-    element: (
-      <ProtectedRoute roles={["admin"]}>
-        <JobReports />
-      </ProtectedRoute>
-    ),
+    path: "/admin/technicians/:id",
+    element: <ProtectedRoute roles={["admin"]}><TechnicianDetail /></ProtectedRoute>,
   },
 ]);
 

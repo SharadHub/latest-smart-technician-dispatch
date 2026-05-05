@@ -1,35 +1,49 @@
 import { Server } from "socket.io";
+import { sessionMiddleware } from "../app.js";
+import { registerTechnicianHandlers } from "./technicianSocket.js";
+import { registerJobHandlers } from "./jobSocket.js";
 
-let io;
+let io = null;
+
+// Adapt express middleware for Socket.IO handshake
+const wrap = (fn) => (socket, next) => fn(socket.request, socket.request.res || {}, next);
 
 export const initSocket = (httpServer) => {
   io = new Server(httpServer, {
     cors: {
-      origin: "*"
+      origin: process.env.CLIENT_URL || "http://localhost:5173",
+      credentials: true,
+    },
+  });
+
+  // Parse session cookie on every socket connection
+  io.use(wrap(sessionMiddleware));
+
+  // Attach verified identity to socket.data
+  io.use((socket, next) => {
+    const userId = socket.request.session?.userId;
+    if (userId) {
+      socket.data.userId = userId.toString();
+      socket.data.userRole = socket.request.session.role;
     }
+    next();
   });
 
   io.on("connection", (socket) => {
-    console.log("Socket connected:", socket.id);
+    // Auto-join user room from session — no trust in client-provided userId
+    if (socket.data.userId && socket.data.userRole === "user") {
+      socket.join(`user:${socket.data.userId}`);
+    }
 
-    socket.on("join", ({ userId, role }) => {
-      socket.join(`${role}:${userId}`);
-      console.log(`${role}:${userId} joined room`);
-    });
-
-    socket.on("ping", (data) => {
-      socket.emit("pong", data);
-    });
-
-    socket.on("disconnect", () => {
-      console.log("Socket disconnected:", socket.id);
-    });
+    registerTechnicianHandlers(io, socket);
+    registerJobHandlers(io, socket);
   });
 
+  console.log("Socket.IO attached");
   return io;
 };
 
 export const getIO = () => {
-  if (!io) throw new Error("Socket.io not initialized");
+  if (!io) throw new Error("Socket.IO not initialized");
   return io;
 };

@@ -22,4 +22,4 @@ export const authorize = (...roles) => {
 // Specific role middlewares
 export const isAdmin = authorize("admin");
 export const isTechnician = authorize("technician", "admin");
-export const isUser = authorize("user", "technician", "admin");
+export const isUser = authorize("user");

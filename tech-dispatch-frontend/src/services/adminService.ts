@@ -1,76 +1,45 @@
 import { api } from "../api/client";
-import type {
-  User,
-  Technician,
-  AdminStats,
-  PaginatedResponse,
-} from "../types";
+import type { User, Technician, AdminStats, JobStats, Job, PaginatedResponse } from "../types";
 
 export const adminService = {
-  /**
-   * Get admin dashboard stats
-   */
-  getStats: async (): Promise<AdminStats> => {
-    const response = await api.get<{ success: boolean; data: AdminStats }>("/admin/stats", {
-      deduplicate: true,
-    });
-    return response.data;
-  },
+  getStats: () =>
+    api.get<{ success: boolean; data: AdminStats }>("/admin/stats"),
 
-  /**
-   * Get all users with pagination
-   */
-  getUsers: async (page = 1, limit = 10): Promise<PaginatedResponse<User>> => {
-    const response = await api.get<PaginatedResponse<User>>(
-      `/admin/users?page=${page}&limit=${limit}`,
-      { deduplicate: true }
-    );
-    return response;
-  },
+  getJobStats: () =>
+    api.get<{ success: boolean; data: JobStats }>("/admin/job-stats"),
 
-  /**
-   * Get single user by ID
-   */
-  getUser: async (id: string): Promise<User> => {
-    const response = await api.get<{ success: boolean; data: User }>(`/admin/users/${id}`);
-    return response.data;
-  },
+  getUsers: (page = 1, limit = 10, search = "") =>
+    api.get<PaginatedResponse<User>>(`/admin/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`),
 
-  /**
-   * Update user
-   */
-  updateUser: async (id: string, data: Partial<User>): Promise<User> => {
-    const response = await api.put<{ success: boolean; data: User }>(`/admin/users/${id}`, data);
-    return response.data;
-  },
+  getUserActivity: (id: string) =>
+    api.get<{ success: boolean; data: { user: User; jobs: Job[] } }>(`/admin/users/${id}/activity`),
 
-  /**
-   * Delete user
-   */
-  deleteUser: async (id: string): Promise<void> => {
-    await api.delete(`/admin/users/${id}`);
-  },
+  deleteUser: (id: string) =>
+    api.delete<{ success: boolean }>(`/admin/users/${id}`),
 
-  /**
-   * Get all technicians with pagination
-   */
-  getTechnicians: async (page = 1, limit = 10): Promise<PaginatedResponse<Technician>> => {
-    const response = await api.get<PaginatedResponse<Technician>>(
-      `/admin/technicians?page=${page}&limit=${limit}`,
-      { deduplicate: true }
-    );
-    return response;
-  },
+  warnUser: (id: string, reason: string) =>
+    api.post<{ success: boolean; data: User }>(`/admin/users/${id}/warn`, { reason }),
 
-  /**
-   * Verify a technician
-   */
-  verifyTechnician: async (id: string): Promise<Technician> => {
-    const response = await api.put<{ success: boolean; data: Technician }>(
-      `/admin/technicians/${id}/verify`
-    );
-    return response.data;
-  },
+  removeWarning: (id: string, warningId: string) =>
+    api.delete<{ success: boolean; data: User }>(`/admin/users/${id}/warn/${warningId}`),
+
+  getTechnicians: (page = 1, limit = 10, search = "") =>
+    api.get<PaginatedResponse<Technician>>(`/admin/technicians?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`),
+
+  getTechnicianActivity: (id: string) =>
+    api.get<{ success: boolean; data: { technician: Technician; jobs: Job[] } }>(`/admin/technicians/${id}/activity`),
+
+  verifyTechnician: (id: string) =>
+    api.put<{ success: boolean; data: Technician }>(`/admin/technicians/${id}/verify`),
+
+  deleteTechnician: (id: string) =>
+    api.delete<{ success: boolean }>(`/admin/technicians/${id}`),
+
+  warnTechnician: (id: string, reason: string) =>
+    api.post<{ success: boolean; data: User }>(`/admin/technicians/${id}/warn`, { reason }),
+
+  removeTechnicianWarning: (id: string, warningId: string) =>
+    api.delete<{ success: boolean; data: User }>(`/admin/technicians/${id}/warn/${warningId}`),
 };
 
 export default adminService;

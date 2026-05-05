@@ -1,18 +1,14 @@
 import mongoose from "mongoose";
 
-const ratingSchema = new mongoose.Schema(
-  {
-    bookingId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Booking",
-      unique: true,
-    },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    technicianId: { type: mongoose.Schema.Types.ObjectId, ref: "Technician" },
-    score: { type: Number, min: 1, max: 5 },
-    comment: String,
-  },
-  { timestamps: true },
-);
+const ratingSchema = new mongoose.Schema({
+  job: { type: mongoose.Schema.Types.ObjectId, ref: "Job", required: true, unique: true },
+  technician: { type: mongoose.Schema.Types.ObjectId, ref: "Technician", required: true },
+  client: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  stars: { type: Number, required: true, min: 1, max: 5 },
+  review: { type: String, maxlength: 500, default: "" },
+}, { timestamps: true });
+
+ratingSchema.index({ technician: 1 });
+ratingSchema.index({ client: 1 });
 
 export default mongoose.model("Rating", ratingSchema);

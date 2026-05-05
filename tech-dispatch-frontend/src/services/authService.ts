@@ -1,24 +1,24 @@
+import { api } from "../api/client";
+import type { User } from "../types";
 
-import { createService } from "./factory";
-
-const endpoints = {
-  register: { path: "/auth/register", method: "post" as const },
-  login: { path: "/auth/login", method: "post" as const },
-  getMe: { path: "/auth/me", method: "get" as const, deduplicate: true, transform: (r: any) => r.data },
-  updateDetails: { path: "/auth/updatedetails", method: "put" as const, transform: (r: any) => r.data },
-  updatePassword: { path: "/auth/updatepassword", method: "put" as const, transform: (r: any) => ({ token: r.token }) },
-  deleteAccount: { path: "/auth/me", method: "delete" as const },
-  updateLocation: { path: "/auth/location", method: "put" as const, transform: (r: any) => r.data },
-};
-
-const baseService = createService(endpoints, ["register", "login", "updatePassword"]);
+interface AuthResponse {
+  success: boolean;
+  pending?: boolean;
+  data: User;
+}
 
 export const authService = {
-  ...baseService,
-  deleteAccount: async (): Promise<void> => {
-    await baseService.deleteAccount();
-    authService.logout();
-  },
-} as typeof baseService & { deleteAccount: () => Promise<void> };
+  register: (data: { name: string; email: string; password: string; phone?: string; role?: string; skills?: string[] }) =>
+    api.post<AuthResponse>("/auth/register", data),
+
+  login: (data: { email: string; password: string }) =>
+    api.post<AuthResponse>("/auth/login", data),
+
+  logout: () =>
+    api.post<{ success: boolean }>("/auth/logout"),
+
+  getMe: () =>
+    api.get<AuthResponse>("/auth/me"),
+};
 
 export default authService;

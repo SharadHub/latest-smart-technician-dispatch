@@ -1,205 +1,144 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import Navbar from "../../components/layout/Navbar";
 import { adminService } from "../../services";
-import toast from "react-hot-toast";
+import AdminLayout from "../../components/admin/AdminLayout";
+import { Users, Wrench, Clock, CheckCircle } from "lucide-react";
 import type { AdminStats } from "../../types";
 import {
-  Users,
-  Wrench,
-  ClipboardList,
-  TrendingUp,
-  Loader2,
-  ArrowRight,
-  CheckCircle,
-  Clock,
-  XCircle,
-  AlertTriangle,
-  BarChart3,
-  Shield,
-} from "lucide-react";
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
+
+type Period = "daily" | "weekly" | "monthly" | "yearly";
+type JobStatPoint = { label: string; completed: number; failed: number };
+type JobStats = Record<Period, JobStatPoint[]>;
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [jobStats, setJobStats] = useState<JobStats | null>(null);
+  const [period, setPeriod] = useState<Period>("daily");
+  const today = new Date().toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" });
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const data = await adminService.getStats();
-        setStats(data);
-      } catch {
-        toast.error("Failed to load stats");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
+    adminService.getStats().then((res) => setStats(res.data)).catch(() => {});
+    adminService.getJobStats().then((res) => setJobStats(res.data)).catch(() => {});
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="flex items-center justify-center py-32">
-          <Loader2 size={32} className="animate-spin text-primary" />
-        </div>
-      </div>
-    );
-  }
-
   const statCards = [
-    {
-      label: "Total Users",
-      value: stats?.users || 0,
-      icon: Users,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-    },
-    {
-      label: "Technicians",
-      value: stats?.technicians || 0,
-      icon: Wrench,
-      color: "text-cyan-600",
-      bg: "bg-cyan-50",
-    },
-    {
-      label: "Total Bookings",
-      value: stats?.bookings.total || 0,
-      icon: ClipboardList,
-      color: "text-purple-600",
-      bg: "bg-purple-50",
-    },
-    {
-      label: "Completed",
-      value: stats?.bookings.byStatus?.completed || 0,
-      icon: TrendingUp,
-      color: "text-green-600",
-      bg: "bg-green-50",
-    },
+    { label: "Total Users", value: stats?.totalUsers ?? "—", icon: Users, bg: "bg-blue-50", color: "text-blue-600" },
+    { label: "Total Technicians", value: stats?.totalTechnicians ?? "—", icon: Wrench, bg: "bg-green-50", color: "text-green-600" },
+    { label: "Pending Approval", value: stats?.pendingTechnicians ?? "—", icon: Clock, bg: "bg-amber-50", color: "text-amber-600" },
+    { label: "Approved Technicians", value: stats?.approvedTechnicians ?? "—", icon: CheckCircle, bg: "bg-purple-50", color: "text-purple-600" },
   ];
 
-  const statusBreakdown = [
-    { key: "requested", label: "Requested", icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-    { key: "accepted", label: "Accepted", icon: CheckCircle, color: "text-blue-600", bg: "bg-blue-50" },
-    { key: "completed", label: "Completed", icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
-    { key: "failed", label: "Failed", icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
-    { key: "cancelled", label: "Cancelled", icon: XCircle, color: "text-gray-600", bg: "bg-gray-50" },
-    { key: "expired", label: "Expired", icon: AlertTriangle, color: "text-orange-600", bg: "bg-orange-50" },
-  ];
+  const periodLabels: Record<Period, string> = {
+    daily: "Last 7 Days",
+    weekly: "Last 4 Weeks",
+    monthly: "Last 12 Months",
+    yearly: "Last 4 Years",
+  };
+
+  const chartData = jobStats?.[period] ?? [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 mb-8"
-        >
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <Shield size={22} className="text-white" />
+    <AdminLayout>
+      <div className="px-8 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+              <Users size={18} className="text-gray-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Admin Analytics</h1>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-dark">Admin Dashboard</h1>
-            <p className="text-gray-500 text-sm">System overview and management</p>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500">{today}</span>
+            <Link to="/admin/users" className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors no-underline">
+              Manage Users
+            </Link>
+            <Link to="/admin/technicians" className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors no-underline">
+              Manage Technicians
+            </Link>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Stat Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {statCards.map((card, i) => (
-            <motion.div
-              key={card.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="bg-white rounded-xl border border-gray-100 p-5"
-            >
-              <div className={`w-10 h-10 ${card.bg} rounded-lg flex items-center justify-center mb-3`}>
-                <card.icon size={20} className={card.color} />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {statCards.map(({ label, value, icon: Icon, bg, color }) => (
+            <div key={label} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+              <div className={`w-12 h-12 ${bg} rounded-xl flex items-center justify-center mb-4`}>
+                <Icon size={22} className={color} />
               </div>
-              <div className="text-2xl font-bold text-dark">{card.value}</div>
-              <div className="text-sm text-gray-500">{card.label}</div>
-            </motion.div>
+              <p className="text-sm text-gray-500">{label}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
+            </div>
           ))}
         </div>
 
-        {/* Status Breakdown */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-xl border border-gray-100 p-6 mb-8"
-        >
-          <h3 className="text-lg font-semibold text-dark mb-4 flex items-center gap-2">
-            <BarChart3 size={18} />
-            Bookings by Status
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {statusBreakdown.map((s) => (
-              <div key={s.key} className={`${s.bg} rounded-xl p-4 text-center`}>
-                <s.icon size={20} className={`${s.color} mx-auto mb-2`} />
-                <div className="text-xl font-bold text-dark">
-                  {stats?.bookings.byStatus[s.key as keyof typeof stats.bookings.byStatus] || 0}
-                </div>
-                <div className="text-xs text-gray-500">{s.label}</div>
-              </div>
-            ))}
+        {/* Job Stats Chart */}
+        <div className="mt-8 bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Job Activity</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Completed vs failed/expired jobs</p>
+            </div>
+            <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+              {(["daily", "weekly", "monthly", "yearly"] as Period[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border-none cursor-pointer capitalize ${
+                    period === p ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 bg-transparent hover:text-gray-700"
+                  }`}
+                >
+                  {p === "daily" ? "7D" : p === "weekly" ? "4W" : p === "monthly" ? "12M" : "4Y"}
+                </button>
+              ))}
+            </div>
           </div>
-        </motion.div>
+
+          {chartData.length === 0 ? (
+            <div className="flex items-center justify-center h-48 text-sm text-gray-400">
+              Loading chart data...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={chartData} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ border: "1px solid #f0f0f0", borderRadius: "12px", fontSize: "12px" }}
+                  cursor={{ fill: "#f9fafb" }}
+                />
+                <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }} />
+                <Bar dataKey="completed" name="Completed" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="failed" name="Failed / Expired" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+
+          <p className="text-xs text-gray-400 mt-2 text-center">{periodLabels[period]}</p>
+        </div>
 
         {/* Quick Links */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Link to="/admin/users" className="no-underline">
-            <motion.div
-              whileHover={{ y: -2 }}
-              className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg transition-all group"
-            >
-              <div className="flex items-start justify-between">
-                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                  <Users size={20} className="text-blue-600" />
-                </div>
-                <ArrowRight size={16} className="text-gray-300 group-hover:text-primary transition-colors" />
-              </div>
-              <h3 className="mt-3 font-semibold text-dark">Manage Users</h3>
-              <p className="text-xs text-gray-400 mt-1">View, block, or delete user accounts</p>
-            </motion.div>
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <Link to="/admin/users" className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow no-underline group">
+            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
+              <Users size={22} className="text-blue-600" />
+            </div>
+            <h3 className="font-semibold text-gray-900">Manage Users</h3>
+            <p className="text-sm text-gray-500 mt-1">View, search, warn and remove user accounts</p>
           </Link>
-          <Link to="/admin/technicians" className="no-underline">
-            <motion.div
-              whileHover={{ y: -2 }}
-              className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg transition-all group"
-            >
-              <div className="flex items-start justify-between">
-                <div className="w-10 h-10 bg-cyan-50 rounded-lg flex items-center justify-center">
-                  <Wrench size={20} className="text-cyan-600" />
-                </div>
-                <ArrowRight size={16} className="text-gray-300 group-hover:text-primary transition-colors" />
-              </div>
-              <h3 className="mt-3 font-semibold text-dark">Manage Technicians</h3>
-              <p className="text-xs text-gray-400 mt-1">Approve or reject registrations</p>
-            </motion.div>
-          </Link>
-          <Link to="/admin/reports" className="no-underline">
-            <motion.div
-              whileHover={{ y: -2 }}
-              className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg transition-all group"
-            >
-              <div className="flex items-start justify-between">
-                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                  <BarChart3 size={20} className="text-purple-600" />
-                </div>
-                <ArrowRight size={16} className="text-gray-300 group-hover:text-primary transition-colors" />
-              </div>
-              <h3 className="mt-3 font-semibold text-dark">Job Reports</h3>
-              <p className="text-xs text-gray-400 mt-1">Analyze job requests over time</p>
-            </motion.div>
+
+          <Link to="/admin/technicians" className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow no-underline group">
+            <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-green-100 transition-colors">
+              <Wrench size={22} className="text-green-600" />
+            </div>
+            <h3 className="font-semibold text-gray-900">Manage Technicians</h3>
+            <p className="text-sm text-gray-500 mt-1">Approve, warn, review and manage technician accounts</p>
           </Link>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }
